@@ -1,9 +1,12 @@
-module SimpleHarmonicMotion
+module Vibration
 using Makie
 using DataStructures: CircularBuffer
 
-export DynamicalFunction, current_state, current_parameters, TrajectoryObservable, step!, set_state!, reinit!
-export set_parameter!, harmonicmotion_plot!, simpleharmonic, timeseries_plots!
+import ..PhysicsEducation: set_parameter!, trajectory_plot!, current_state, current_parameters,  step!, set_state!, reinit!
+
+export DynamicalFunction, TrajectoryObservable
+export  simpleharmonic, timeseries_plots!, superposition_plot!, lissajous
+export dampedvibration, forcevibration, _trajectory_plot_controls!, _add_ds_param_controls!
 
 function simpleharmonic(t::Real, p::Vector{Float64})
     ω, A, ϕ = p[1], p[2], p[3]
@@ -11,7 +14,48 @@ function simpleharmonic(t::Real, p::Vector{Float64})
     y = A*sin(ω*t+ϕ)
     return Float64[x, y]
 end
+function lissajous(t::Real, p::Vector{Float64})
+    ω, A, ϕ = p[1], p[2], p[3]
+    ω₂, A₂, ϕ₂ = p[4], p[5], p[6]
+    x = A*cos(ω*t+ϕ)
+    y = A₂*cos(ω₂*t+ϕ₂)
+    return Float64[x, y]
+end
+"""
+    dampedvibration(t::Real, p::Vector{<:Real}) -> Vector
 
+``\frac{d^2x}{dt^2} + γ\frac{dx}{dt} + ω_0^2x = 0``
+"""
+function dampedvibration(t::Real, p::Vector{<:Real})
+    ω₀, γ, x₀, v₀ = p[1], p[2], p[3], p[4]
+    ω₁ = sqrt(complex(ω₀^2 - γ^2/4))
+    temp = abs(ω₁) ≈ 0.0 ? t : sin(ω₁*t)/ω₁
+    x = exp(-γ/2*t)*(x₀*cos(ω₁*t) + (v₀+γ/2*x₀)*temp)
+    return Float64[real(x), 0.0] 
+end
+"""
+    forcevibration(t::Real, p::Vector{<:Real}) -> Vector
+
+```math
+\\frac{d^2x}{dt^2} + γ\\frac{dx}{dt} + ω_0^2x = f\\cos(ωt)
+```
+"""
+function forcevibration(t::Real, p::Vector{<:Real})
+    ω₀, γ, x₀, v₀ = p[1], p[2], p[3], p[4]
+    f, ω = p[5], p[6]
+    ω₁ = sqrt(complex(ω₀^2 - γ^2/4))
+    A = f*γ*ω/((ω₀^2-ω^2)^2+(γ*ω)^2)
+    B = f*(ω₀^2-ω^2)/((ω₀^2-ω^2)^2+(γ*ω)^2)
+    ω₁ = sqrt(complex(ω₀^2 - γ^2/4))
+    temp = abs(ω₁) ≈ 0.0 ? t : sin(ω₁*t)/ω₁
+    x = A*sin(ω*t)+B*cos(ω*t) + exp(-γ/2*t)*(x₀*cos(ω₁*t) + (v₀+γ/2*x₀)*temp)
+    return Float64[real(x), 0.0]
+end
+"""
+    DynamicalFunction{T<:Real, P}
+
+Define dynamical function. 
+"""
 mutable struct DynamicalFunction{T<:Real, P}
     f::Function
     t::T
@@ -22,13 +66,31 @@ mutable struct DynamicalFunction{T<:Real, P}
 end
 current_state(df::DynamicalFunction) = df.f(df.t, df.p)
 current_parameters(df::DynamicalFunction) = df.p
+"""
+    step!(ds::DynamicalFunction, Δt::Real)
 
+Update the times.
+"""
+step!(ds::DynamicalFunction, Δt::Real) = (ds.t += Δt;)
+reinit!(df::DynamicalFunction, t0::Real) = (df.t = t0;)
+set_parameter!(df::DynamicalFunction, index::Int, value) = (df.p[index] = value;)
+function set_parameter!(df::DynamicalFunction, value::Vector)  
+    for i in eachindex(value)
+        set_parameter!(df, i, value[i])
+    end
+    return nothing
+end
 
-struct TrajectoryObservable{T<:DynamicalFunction}
+"""
+    TrajectoryObservable{T<:DynamicalFunction}
+
+Construct the trajectory.
+"""
+struct TrajectoryObservable{T<:DynamicalFunction} 
     dss::Vector{T} # reference to the dynamical system
     state_observable::Observable
     tail_observables::Vector{Observable}
-    param_observable::Vector{Observable}
+    param_observables::Vector{Observable}
     current_step::Observable{Int}
     Δt::Real # a default value for `step!`
 end
@@ -44,8 +106,8 @@ function TrajectoryObservable(dss::Vector{S}; tail::Int=1000, current_step::Int=
     
     !isa(mapdf, Nothing) && push!(tailobs, map(mapdf, tailobs...))
     finalpoints = Observable([x[][end] for x in tailobs])
-    param_observable = Observable[Observable(deepcopy(current_parameters(ds))) for ds in dss]
-    return TrajectoryObservable{S}(dss, finalpoints, tailobs, param_observable, Observable(current_step), Δt)
+    param_observables = Observable[Observable(deepcopy(current_parameters(ds))) for ds in dss]
+    return TrajectoryObservable{S}(dss, finalpoints, tailobs, param_observables, Observable(current_step), Δt)
 end
 """
     step!(dso::TrajectoryObservable, n::Int = 1) -> Nothing
@@ -68,14 +130,6 @@ function step!(dso::TrajectoryObservable, n::Int = 1)
     return nothing
 end
 """
-    step!(ds::DynamicalFunction, Δt::Real)
-
-Update the times.
-"""
-step!(ds::DynamicalFunction, Δt::Real) = (ds.t += Δt;)
-
-
-"""
     set_state!(dso::DynamicalSystemObservable, u, i::Int = 1) -> Nothing
 
 To set state with `u`. `i` is the index of Vector `dso.dss`.
@@ -91,25 +145,25 @@ function set_state!(dso::TrajectoryObservable, t0::Real, i::Int = 1)
     notify(dso.state_observable)
     return nothing
 end
-
-reinit!(df::DynamicalFunction, t0::Real) = (df.t = t0;)
-
-
 function set_parameter!(dso::TrajectoryObservable, i::Int, index::Int, value)
-    dso.param_observable[i][][index] = value
+    dso.param_observables[i][][index] = value
     set_parameter!(dso.dss[i], index, value)
-    notify(dso.param_observable[i])
-    return nothing
-end
-set_parameter!(df::DynamicalFunction, index::Int, value) = (df.p[index] = value;)
-function set_parameter!(df::DynamicalFunction, value::Vector)  
-    for i in eachindex(value)
-        set_parameter!(df, i, value[i])
-    end
+    notify(dso.param_observables[i])
     return nothing
 end
 
-function harmonicmotion_plot!(fig::Figure, dso::TrajectoryObservable;
+"""
+    trajectory_plot!(fig::Figure, dso::TrajectoryObservable;
+        parameter_sliders=nothing, 
+        parameter_names=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> string.(keys(ps)).*"(j)") for (j, ps) in enumerate(parameter_sliders)], 
+        colors=[:blue for _ in 1:length(dso.tail_observables)], 
+        axis=NamedTuple(), 
+        plotkwargs=NamedTuple()
+    ) -> Axis
+
+Plot the trajectories.
+"""
+function trajectory_plot!(fig::Figure, dso::TrajectoryObservable;
     parameter_sliders=nothing, 
     parameter_names=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> string.(keys(ps)).*"($j)") for (j, ps) in enumerate(parameter_sliders)], 
     colors=[:blue for _ in 1:length(dso.tail_observables)], 
@@ -119,11 +173,8 @@ function harmonicmotion_plot!(fig::Figure, dso::TrajectoryObservable;
     t0 = [deepcopy(ds.t) for ds in dso.dss]
     p0 = [deepcopy(current_parameters(ds)) for ds in dso.dss]
     statespacelayout = fig[1,1] = GridLayout() 
-    tailobs, finalpoints = dso.tail_observables, dso.state_observable
-    statespaceax = _init_statespace_plot!(statespacelayout, tailobs, finalpoints, colors, axis, plotkwargs)
+    statespaceax = _init_statespace_plot!(statespacelayout, dso.tail_observables, dso.state_observable, colors, axis, plotkwargs)
     reset, run, step, stepslider = _trajectory_plot_controls!(statespacelayout)
-    # step = Observable(0); stepslider = Observable(1)
-
     isrunning = Observable(false)
     on(run) do c; isrunning[] = !isrunning[]; end
     on(run) do c
@@ -137,14 +188,12 @@ function harmonicmotion_plot!(fig::Figure, dso::TrajectoryObservable;
         n = stepslider[]
         step!(dso, n)
     end   
-
     on(reset) do clicks
         for j in eachindex(t0)
             set_state!(dso, copy(t0[j]), j)
         end
         dso.state_observable[] = [x[][end] for x in dso.tail_observables]
     end
-
     if !isnothing(parameter_sliders)
         paramlayout = fig[2, :] = GridLayout(tellheight = true, tellwidth = false)
         slidervals, sliders = _add_ds_param_controls!(
@@ -179,8 +228,23 @@ function harmonicmotion_plot!(fig::Figure, dso::TrajectoryObservable;
     end
     return statespaceax
 end
+"""
+    superposition_plot!(statespaceax::Axis, plotted_finalpoints::Observable; colors=[:blue for _ in 1:length(plotted_finalpoints[])])
 
-function _init_statespace_plot!(layout, tailobs, finalpoints, colors, axis=NamedTuple(), plotkwargs= NamedTuple())
+Plot some lines for a simple harmonic vibration.
+"""
+function superposition_plot!(statespaceax::Axis, plotted_finalpoints::Observable; colors=[:blue for _ in 1:length(plotted_finalpoints[])])
+    xcoords = map(x->Point2f[[y[1], 0.0] for y in x], plotted_finalpoints)
+    linx = lift(plotted_finalpoints) do ob
+        res = [(Point2f(ob[i][1], 0.0),  Point2f(ob[i])) for i in eachindex(ob)]
+        append!(res, [(Point2f(ob[i]), Point2f(ob[end])) for i in 1:length(ob)-1])
+    end
+    scatter!(statespaceax, xcoords, markersize=20.0, marker=:diamond, color=colors)
+    arrows!(statespaceax, [Point2f(0,0) for _ in 1:length(plotted_finalpoints[])], plotted_finalpoints, linewidth=4.0, arrowsize = 20, color=colors)
+    linesegments!(statespaceax, linx, linestyle=:dash, linewidth=2.0, color=:black)
+end
+
+function _init_statespace_plot!(layout::GridLayout, tailobs::Vector{Observable}, finalpoints::Observable, colors, axis=NamedTuple(), plotkwargs= NamedTuple())
     statespaceax = Axis(layout[1, 1]; xlabel = "x", ylabel ="y", axis... )
     plotted_tailobs = [map(x -> Point2f[y[[1, 2]] for y in x], ob) for ob in tailobs]
     plotted_finalpoints = map(x -> Point2f[y[[1, 2]] for y in x], finalpoints)
@@ -192,15 +256,6 @@ function _init_statespace_plot!(layout, tailobs, finalpoints, colors, axis=Named
         Makie.lines!(statespaceax, ob; color = x, linewidth = 3.0, transparency = true, pk...)
     end
     Makie.scatter!(statespaceax, plotted_finalpoints; color = colors, markersize = 20, marker = :circle)
-
-    xcoords = map(x->Point2f[[y[1], 0.0] for y in x], plotted_finalpoints)
-    linx = lift(plotted_finalpoints) do ob
-        res = [(Point2f(ob[i][1], 0.0),  Point2f(ob[i])) for i in eachindex(ob)]
-        append!(res, [(Point2f(ob[i]), Point2f(ob[end])) for i in 1:length(ob)-1])
-    end
-    scatter!(statespaceax, xcoords, markersize=20.0, marker=:diamond, color=colors)
-    arrows!(statespaceax, [Point2f(0,0) for _ in 1:length(tailobs)], plotted_finalpoints, linewidth=4.0, arrowsize = 20, color=colors)
-    linesegments!(statespaceax, linx, linestyle=:dash, linewidth=2.0, color=:black)
     return statespaceax
 end
 function _trajectory_plot_controls!(layout)
@@ -236,8 +291,6 @@ function _add_ds_param_controls!(paramlayout, parameter_sliders, pnames, p0)
     end
     return slidervals, sliders
 end
-
-
 
 # timeseries
 """
@@ -277,7 +330,7 @@ function timeseries_plots!(
                 [Point2f(max(0, dso.Δt*(n - T + k)/timeunit), _obtain_data(x[k], f)) for k in eachindex(x)]
             end
             # plot them
-            lk = linekwargs isa AbstractVector ? linekwargs[i] : linekwargs
+            lk = linekwargs isa AbstractVector ? linekwargs[j][i] : linekwargs
             lines!(axs[j], observed_data; color = colors[i], lk...)
         end
     # Add a last observable trigger that changes the axis xspan
@@ -289,7 +342,7 @@ function timeseries_plots!(
             )
         end
     end
-    axislegend()
+    
     return axs
 end
 
