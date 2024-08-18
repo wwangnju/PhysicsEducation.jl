@@ -6,7 +6,7 @@ using ..Vibration: _trajectory_plot_controls!, _add_ds_param_controls!
 
 import ..PhysicsEducation: reinit!, current_state, current_parameters, step!, set_parameter!,  set_state!, trajectory_plot!
 
-export harmonicwave1D, harmonicwave2D
+export harmonicwave1D, harmonicwave2D, dopplereffect
 export WaveObservable, WaveFunction, intensity_plot!, doubleslit_intensity,michelsoninterferometer_intensity
 export doubleslit_fraunhofer, singleslit_fraunhofer, rectangular_fraunhofer, circular_fraunhofer, slit_grating, newton_ring_intensity
 
@@ -107,7 +107,7 @@ function trajectory_plot!(fig::Figure, dso::WaveObservable;
     t0 = [deepcopy(ds.t) for ds in dso.wfs]
     p0 = [deepcopy(current_parameters(ds)) for ds in dso.wfs]
     dims = dso.wfs[1].xycoord|>length 
-    xycoords = Observable[ Observable(ds.xycoord) for ds in dso.wfs]
+    xycoords = Observable[Observable(ds.xycoord) for ds in dso.wfs]
 
     statespacelayout = fig[1,1] = GridLayout() 
     statespaceax = _init_statespace_plot!(statespacelayout, xycoords, dso.state_observables, dims, colors, axis, plotkwargs, is3D)
@@ -137,7 +137,7 @@ function trajectory_plot!(fig::Figure, dso::WaveObservable;
     return statespaceax
 end
 function _init_statespace_plot!(layout::GridLayout, xycoords::Vector{Observable}, state_observables::Vector{Observable}, dims::Int, colors, axis=NamedTuple(), plotkwargs=NamedTuple(), is3D::Bool=false)
-    statespaceax = !is3D ? Axis(layout[1, 1]; xlabel = "x", ylabel ="y", axis... ) : Axis3(layout[1, 1]; xlabel = "x", ylabel ="y", zlabel="z", axis... )
+    statespaceax = !is3D ? Axis(layout[1, 1]; xlabel = "x/m", ylabel ="y/m", axis... ) : Axis3(layout[1, 1]; xlabel = "x/m", ylabel ="y/m", zlabel="z/m", axis... )
     xss = [map(x->first(x), xycoord) for xycoord in xycoords ]
     yss = dims==2 ? [map(x->x[2], xycoord) for xycoord in xycoords ] : nothing
 
@@ -218,6 +218,16 @@ function harmonicwave2D(t::Real, xy::Vector{Vector{Float64}}, p::Vector)
     return z
 end
 
+function dopplereffect(t::Real, xy::Vector{Vector{Float64}}, p::Vector)
+    ν₀, u, νₛ, ϕ₁ = p[1], p[2], p[3], p[4]
+    ω₁ = 2pi*ν₀
+    x0 = νₛ*t
+    # u = ω₁/k₁
+    z = zeros(length(xy[1]), 1)
+    for (i, x) in enumerate(xy[1])
+        z[i, 1] = cos(ω₁*(t-abs(x-x0)/u)+ϕ₁)*(t-abs(x-x0)>=0.0)
+    end
+end
 
 #optic intensity
 
@@ -229,6 +239,7 @@ function intensity_plot!(fig::Figure, dso::WaveObservable;
     plotkwargs=NamedTuple(),
     scale=identity,
     slider::Symbol=:x,
+    sliderkwargs=NamedTuple()
 )
     p0 = [deepcopy(current_parameters(ds)) for ds in dso.wfs]
     @assert  2 == dso.wfs[end].xycoord|>length "intensity_plot! error: only support two dimenison."
@@ -239,29 +250,29 @@ function intensity_plot!(fig::Figure, dso::WaveObservable;
     statespaceax = _init_statespace_plot!(statespacelayout, xycoords, dso.state_observables, 2, colors, axis, plotkwargs, false)
     if slider == :x
         layout2 = fig[:, 2] = GridLayout()
-        axint = Axis(layout2[:, 1]; ylabel = "intensity", xlabel="y(m)")
-        sl_x = Slider(fig.layout[1, 1][2,1], range=1:1:nx, startvalue=nx)
+        axint = Axis(layout2[:, 1]; ylabel = "相对强度", xlabel="y/m")
+        sl_x = Slider(fig.layout[1, 1][2,1], range=1:1:nx, startvalue=nx,color_active=:black, color_active_dimmed=:gray)
         int_y = lift(sl_x.value, dso.state_observables[end]) do x, y 
             scale.(y[x, :])
         end
         x0 = lift(sl_x.value, xycoords[end]) do i, x
             x[1][i]
         end 
-        vlines!(statespaceax, x0; linewidth=3.0, color=:red)
-        lines!(axint, ys, int_y, linewidth=3.0)
+        vlines!(statespaceax, x0; linewidth=3.0, sliderkwargs...)
+        lines!(axint, ys, int_y, linewidth=3.0, color=:black)
         ylims!(axint, 0, maximum(int_y[])+1e-9)
     elseif slider == :y
-        sl_y = Slider(fig.layout[1, 1][1,2], range=1:1:ny, horizontal = false, startvalue=ny)
+        sl_y = Slider(fig.layout[1, 1][1,2], range=1:1:ny, horizontal = false, startvalue=ny, color_active=:black, color_active_dimmed=:gray)
         int_y = lift(sl_y.value, dso.state_observables[end]) do x, y 
             scale.(y[:, x])
         end
         y0 = lift(sl_y.value, xycoords[end]) do i, x
             x[2][i]
         end 
-        hlines!(statespaceax, y0; linewidth=3.0, color=:red)
+        hlines!(statespaceax, y0; linewidth=3.0, sliderkwargs...)
         layout2 = fig[:, 2] = GridLayout()
-        axint = Axis(layout2[:, 1]; ylabel = "intensity", xlabel="y(m)")
-        lines!(axint, xs, int_y, linewidth=3.0)
+        axint = Axis(layout2[:, 1]; ylabel = "相对强度", xlabel="x/m")
+        lines!(axint, xs, int_y, linewidth=3.0, color=:black)
         ylims!(axint, 0, maximum(int_y[])+1e-9)
     end
     
@@ -320,7 +331,7 @@ function doubleslit_intensity(t::Float64, xy::Vector{Vector{Float64}}, p::Vector
     AA₂ = [r ≈ 0.0 ? A₁ : A₁/r for r in r₂]
     wf₁ = AA₁.*exp.(-im*(k₁*r₁ .+ θ)) + AA₂.*exp.(-im*k₁*r₂)
     int = abs2.(wf₁)
-    return -log.(int/maximum(int))
+    return (int/maximum(int))
 end
 function newton_ring_intensity(t::Float64, xy::Vector{Vector{Float64}}, p::Vector)
     λ, R = p[1], p[2]
@@ -355,15 +366,15 @@ function singleslit_fraunhofer(t::Float64, xy::Vector{Vector{Float64}}, p::Vecto
     λ, W, L = p[1], p[2], p[3]
     θs = sin.(xy[1]/L)
     ys = xy[2]
-    int = [(sinc(W*θ/λ))^2/(λ*L)^2 for θ in θs, _ in ys]
+    int = [(sinc(W*θ/λ))^2 for θ in θs, _ in ys]
     return (int)
 end
 function rectangular_fraunhofer(t::Float64, xy::Vector{Vector{Float64}}, p::Vector)
     λ, W, H, L = p[1], p[2], p[3], p[4]
     xs = xy[1]
     ys = xy[2]
-    int = [(sinc(W*x/λ/L)*sinc(H*y/(λ*L)))^2/(λ*L)^2 for x in xs, y in ys] #
-    return log.(int)
+    int = [(sinc(W*x/λ/L)*sinc(H*y/(λ*L)))^2 for x in xs, y in ys] #
+    return (int)
 end
 """
     circular_aperture(t::Float64, xy::Vector{Vector{Float64}}, p::Vector)
@@ -374,13 +385,14 @@ function circular_fraunhofer(t::Float64, xy::Vector{Vector{Float64}}, p::Vector)
     λ, W, L = p[1], p[2], p[3]
     xs = xy[1]
     ys = xy[2]
-    int = [x^2+y^2 == 0.0 ? 1/4/(λ*L)^2 : (besselj1(pi*W*sqrt(x^2+y^2)/(λ*L))/(pi*W*sqrt(x^2+y^2)/(λ*L)))^2/(λ*L)^2 for x in xs, y in ys]
-    return log.(int)
+
+    int = [sin(atan(sqrt(x^2+y^2), L)) ≈ 0.0 ? 1/4 : (besselj1(pi*W/λ*sin(atan(sqrt(x^2+y^2), L)))/(pi*W/λ*sin(atan(sqrt(x^2+y^2), L))))^2 for x in xs, y in ys]
+    return (int)
 end
 function slit_grating(t::Float64, xy::Vector{Vector{Float64}}, p::Vector)
     λ, d, W, L, N = p[1], p[2], p[3], p[4], p[5]
     xs = xy[1]
     ys = xy[2]
-    [x == 0.0 ? N^2 : sinc(W*x/(λ*L))^2*sin(pi*N*d*x/(λ*L))^2/(sin(pi*d*x/(λ*L)))^2 for x in xs, y in ys]
+    [isapprox(d/λ*sin(atan(x,L)), round(d/λ*sin(atan(x,L))),atol=1e-14) ? N^2*sinc(W/λ*sin(atan(x,L)))^2 : sinc(W/λ*sin(atan(x,L)))^2*sin(pi*N*d/λ*sin(atan(x,L)))^2/(sin(pi*d/λ*sin(atan(x,L))))^2 for x in xs, y in ys]
 end
 end# module

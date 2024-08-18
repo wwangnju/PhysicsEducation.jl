@@ -10,15 +10,15 @@ export dampedvibration, forcevibration, _trajectory_plot_controls!, _add_ds_para
 
 function simpleharmonic(t::Real, p::Vector{Float64})
     ω, A, ϕ = p[1], p[2], p[3]
-    x = A*cos(ω*t+ϕ)
-    y = A*sin(ω*t+ϕ)
+    x = A*cos(2pi*ω*t+ϕ)
+    y = A*sin(2pi*ω*t+ϕ)
     return Float64[x, y]
 end
 function lissajous(t::Real, p::Vector{Float64})
     ω, A, ϕ = p[1], p[2], p[3]
     ω₂, A₂, ϕ₂ = p[4], p[5], p[6]
-    x = A*cos(ω*t+ϕ)
-    y = A₂*cos(ω₂*t+ϕ₂)
+    x = A*cos(2pi*ω*t+ϕ)
+    y = A₂*cos(2pi*ω₂*t+ϕ₂)
     return Float64[x, y]
 end
 """
@@ -37,18 +37,19 @@ end
     forcevibration(t::Real, p::Vector{<:Real}) -> Vector
 
 ```math
-\\frac{d^2x}{dt^2} + γ\\frac{dx}{dt} + ω_0^2x = f\\cos(ωt)
+\\frac{d^2x}{dt^2} + 2ξω_0\\frac{dx}{dt} + ω_0^2x = f\\cos(ωt)
 ```
 """
 function forcevibration(t::Real, p::Vector{<:Real})
-    ω₀, γ, x₀, v₀ = p[1], p[2], p[3], p[4]
+    ω₀, ξ, x₀, v₀ = p[1], p[2], p[3], p[4]
     f, ω = p[5], p[6]
+    γ = 2*ω₀*ξ
     ω₁ = sqrt(complex(ω₀^2 - γ^2/4))
     A = f*γ*ω/((ω₀^2-ω^2)^2+(γ*ω)^2)
     B = f*(ω₀^2-ω^2)/((ω₀^2-ω^2)^2+(γ*ω)^2)
     ω₁ = sqrt(complex(ω₀^2 - γ^2/4))
     temp = abs(ω₁) ≈ 0.0 ? t : sin(ω₁*t)/ω₁
-    x = A*sin(ω*t)+B*cos(ω*t) + exp(-γ/2*t)*(x₀*cos(ω₁*t) + (v₀+γ/2*x₀)*temp)
+    x = A*sin(ω*t)+B*cos(ω*t) + exp(-γ/2*t)*((x₀-B)*cos(ω₁*t) + (v₀-A*ω+γ/2*(x₀-B))*temp)
     return Float64[real(x), 0.0]
 end
 """
@@ -245,7 +246,7 @@ function superposition_plot!(statespaceax::Axis, plotted_finalpoints::Observable
 end
 
 function _init_statespace_plot!(layout::GridLayout, tailobs::Vector{Observable}, finalpoints::Observable, colors, axis=NamedTuple(), plotkwargs= NamedTuple())
-    statespaceax = Axis(layout[1, 1]; xlabel = "x", ylabel ="y", axis... )
+    statespaceax = Axis(layout[1, 1]; xlabel = "x/m", ylabel ="y/m", axis... )
     plotted_tailobs = [map(x -> Point2f[y[[1, 2]] for y in x], ob) for ob in tailobs]
     plotted_finalpoints = map(x -> Point2f[y[[1, 2]] for y in x], finalpoints)
     tail = first(plotted_tailobs)[]|>length
@@ -265,7 +266,7 @@ function _trajectory_plot_controls!(layout)
     step = Button(controllayout[1, 2]; label = "step")
     slider_vals = vcat(1:10, 100:100:1000)
     sg = SliderGrid(controllayout[1,3],
-        (label = "steps =", range = slider_vals, startvalue = 1),
+        (label = "steps =", range = slider_vals, startvalue = 1,color_active=:gray, color_active_dimmed=:gray),
     )   
     return reset.clicks, run.clicks, step.clicks, sg.sliders[1].value
 end
@@ -277,7 +278,7 @@ function _add_ds_param_controls!(paramlayout, parameter_sliders, pnames, p0)
         for (i, (l, vals)) in enumerate(ps)
             startvalue = p0[j][l]
             label = string(pnames[j][l])
-            push!(tuples_for_slidergrid, (;label, range = vals, startvalue))
+            push!(tuples_for_slidergrid, (;label, range = vals, startvalue,color_active=:gray, color_active_dimmed=:gray))
         end
     end
     sg = SliderGrid(paramlayout[1,1], tuples_for_slidergrid...; tellheight = true)
