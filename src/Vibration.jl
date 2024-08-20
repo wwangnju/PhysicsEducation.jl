@@ -8,12 +8,22 @@ export DynamicalFunction, TrajectoryObservable
 export  simpleharmonic, timeseries_plots!, superposition_plot!, lissajous
 export dampedvibration, forcevibration, _trajectory_plot_controls!, _add_ds_param_controls!
 
+"""
+    simpleharmonic(t::Real, p::Vector{Float64}) -> Vector{Float64}
+
+Define the simple harmonic osscillator
+"""
 function simpleharmonic(t::Real, p::Vector{Float64})
     ω, A, ϕ = p[1], p[2], p[3]
     x = A*cos(2pi*ω*t+ϕ)
     y = A*sin(2pi*ω*t+ϕ)
     return Float64[x, y]
 end
+"""
+    lissajous(t::Real, p::Vector{Float64}) -> Vector
+
+Define the lissajous picture.
+"""
 function lissajous(t::Real, p::Vector{Float64})
     ω, A, ϕ = p[1], p[2], p[3]
     ω₂, A₂, ϕ₂ = p[4], p[5], p[6]

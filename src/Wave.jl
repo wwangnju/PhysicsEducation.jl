@@ -10,7 +10,11 @@ export harmonicwave1D, harmonicwave2D, dopplereffect
 export WaveObservable, WaveFunction, intensity_plot!, doubleslit_intensity,michelsoninterferometer_intensity
 export doubleslit_fraunhofer, singleslit_fraunhofer, rectangular_fraunhofer, circular_fraunhofer, slit_grating, newton_ring_intensity
 
+"""
+    WaveFunction{T<:Real, P}
 
+Construct wave function struct.
+"""
 mutable struct WaveFunction{T<:Real, P}
     f::Function
     t::T
@@ -32,7 +36,11 @@ function set_parameter!(df::WaveFunction, value::Vector)
     return nothing
 end
 
+"""
+    WaveObservable{T<:WaveFunction} 
 
+Define the wave observables.
+"""
 struct WaveObservable{T<:WaveFunction} 
     wfs::Vector{T} # reference to the dynamical system
     state_observables::Vector{Observable} # [Observable(Matrix),...]
@@ -199,7 +207,11 @@ function Θ(x::Real)
     x < 0.0 && return 1.0
     return 0.0
 end
+"""
+    harmonicwave1D(t::Real, xy::Vector{Vector{Float64}}, p::Vector) -> Matrix
 
+Define 1-D harmonic wave.
+"""
 function harmonicwave1D(t::Real, xy::Vector{Vector{Float64}}, p::Vector)
     ω₁, k₁, A₁, ϕ₁ = p[1], p[2], p[3], p[4]
     u = ω₁/k₁
@@ -209,6 +221,9 @@ function harmonicwave1D(t::Real, xy::Vector{Vector{Float64}}, p::Vector)
     z[:, 1] = A₁*cos.(phase) .* Θ.(sign(u)*x .- (abs(u)*t + sign(u)*p[5]) )
     return z
 end
+"""
+    harmonicwave2D(t::Real, xy::Vector{Vector{Float64}}, p::Vector) -> Matrix
+"""
 function harmonicwave2D(t::Real, xy::Vector{Vector{Float64}}, p::Vector)
     ω₁, kx, ky, A₁, ϕ₁ = p[1], p[2], p[3], p[4], p[5]
     xs, ys = xy[1], xy[2]
@@ -230,7 +245,20 @@ function dopplereffect(t::Real, xy::Vector{Vector{Float64}}, p::Vector)
 end
 
 #optic intensity
+"""
+    intensity_plot!(fig::Figure, dso::WaveObservable;
+        parameter_sliders=nothing, 
+        parameter_names=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> string.(keys(ps)).*"(\$j)") for (j, ps) in enumerate(parameter_sliders)], 
+        colors=[:blue for _ in 1:length(dso.state_observables)], 
+        axis=NamedTuple(), 
+        plotkwargs=NamedTuple(),
+        scale=identity,
+        slider::Symbol=:x,
+        sliderkwargs=NamedTuple()
+    ) -> Tuple{Axis, Axis}
 
+Plot the intensity of wave function.
+"""
 function intensity_plot!(fig::Figure, dso::WaveObservable;
     parameter_sliders=nothing, 
     parameter_names=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> string.(keys(ps)).*"($j)") for (j, ps) in enumerate(parameter_sliders)], 
@@ -250,7 +278,7 @@ function intensity_plot!(fig::Figure, dso::WaveObservable;
     statespaceax = _init_statespace_plot!(statespacelayout, xycoords, dso.state_observables, 2, colors, axis, plotkwargs, false)
     if slider == :x
         layout2 = fig[:, 2] = GridLayout()
-        axint = Axis(layout2[:, 1]; ylabel = "相对强度", xlabel="y/m")
+        axint = Axis(layout2[:, 1]; ylabel = "相对强度", xlabel="y/m",spinewidth=3.0)
         sl_x = Slider(fig.layout[1, 1][2,1], range=1:1:nx, startvalue=nx,color_active=:black, color_active_dimmed=:gray)
         int_y = lift(sl_x.value, dso.state_observables[end]) do x, y 
             scale.(y[x, :])
@@ -258,8 +286,8 @@ function intensity_plot!(fig::Figure, dso::WaveObservable;
         x0 = lift(sl_x.value, xycoords[end]) do i, x
             x[1][i]
         end 
-        vlines!(statespaceax, x0; linewidth=3.0, sliderkwargs...)
-        lines!(axint, ys, int_y, linewidth=3.0, color=:black)
+        vlines!(statespaceax, x0; linewidth=3.50, sliderkwargs...)
+        lines!(axint, ys, int_y, linewidth=3.50, color=:black)
         ylims!(axint, 0, maximum(int_y[])+1e-9)
     elseif slider == :y
         sl_y = Slider(fig.layout[1, 1][1,2], range=1:1:ny, horizontal = false, startvalue=ny, color_active=:black, color_active_dimmed=:gray)
@@ -269,10 +297,10 @@ function intensity_plot!(fig::Figure, dso::WaveObservable;
         y0 = lift(sl_y.value, xycoords[end]) do i, x
             x[2][i]
         end 
-        hlines!(statespaceax, y0; linewidth=3.0, sliderkwargs...)
+        hlines!(statespaceax, y0; linewidth=3.50, sliderkwargs...)
         layout2 = fig[:, 2] = GridLayout()
-        axint = Axis(layout2[:, 1]; ylabel = "相对强度", xlabel="x/m")
-        lines!(axint, xs, int_y, linewidth=3.0, color=:black)
+        axint = Axis(layout2[:, 1]; ylabel = "相对强度", xlabel="x/m",spinewidth=3.0)
+        lines!(axint, xs, int_y, linewidth=3.50, color=:black)
         ylims!(axint, 0, maximum(int_y[])+1e-9)
     end
     
@@ -317,6 +345,7 @@ end
 
 
 """
+    doubleslit_intensity(t::Float64, xy::Vector{Vector{Float64}}, p::Vector) -> Matrix
 
 Young's double slit interference.
 """
@@ -377,7 +406,7 @@ function rectangular_fraunhofer(t::Float64, xy::Vector{Vector{Float64}}, p::Vect
     return (int)
 end
 """
-    circular_aperture(t::Float64, xy::Vector{Vector{Float64}}, p::Vector)
+    circular_aperture(t::Float64, xy::Vector{Vector{Float64}}, p::Vector) -> Matrix
 
 [see](https://en.wikipedia.org/wiki/Fraunhofer_diffraction_equation)
 """
@@ -389,6 +418,11 @@ function circular_fraunhofer(t::Float64, xy::Vector{Vector{Float64}}, p::Vector)
     int = [sin(atan(sqrt(x^2+y^2), L)) ≈ 0.0 ? 1/4 : (besselj1(pi*W/λ*sin(atan(sqrt(x^2+y^2), L)))/(pi*W/λ*sin(atan(sqrt(x^2+y^2), L))))^2 for x in xs, y in ys]
     return (int)
 end
+"""
+    slit_grating(t::Float64, xy::Vector{Vector{Float64}}, p::Vector) ->  Matrix
+
+[see](https://en.wikipedia.org/wiki/Fraunhofer_diffraction_equation)
+"""
 function slit_grating(t::Float64, xy::Vector{Vector{Float64}}, p::Vector)
     λ, d, W, L, N = p[1], p[2], p[3], p[4], p[5]
     xs = xy[1]
