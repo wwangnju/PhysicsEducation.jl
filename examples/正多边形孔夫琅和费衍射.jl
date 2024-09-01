@@ -1,3 +1,6 @@
+using PhysicsEducation
+using GLMakie
+using Makie.Colors
 function regular_polygon_fraunhofer_figure()
     λ = 600.0e-9 #unit m
     R, L = 4e-3, 10.0
@@ -8,7 +11,7 @@ function regular_polygon_fraunhofer_figure()
  
     slit = WaveFunction(regular_polygon, t0, xy, p)
     dso = WaveObservable([slit])
-    ps = [Dict(1=>4e-7:1e-8:8e-6, 2=>1e-3:1e-4:1e-2, 3=>1:0.1:20.0, 4=>3:1:20)]
+    ps = [Dict(1=>4e-7:1e-8:8e-6, 2=>1e-3:1e-4:1e-2, 3=>1:0.1:20.0, 4=>3:1:100)]
     pnames = [Dict(1=>"波长λ", 2=>"孔半宽R", 3=>"屏孔间距L", 4=>"正多边形n")]
     formats=[Dict(1=>"{:.2e}m", 2=>"{:.2e}m", 3=>"{:.2f}m", 4=>"{:}边")]
     colors = [:grays]
