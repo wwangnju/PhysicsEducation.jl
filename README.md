@@ -13,6 +13,6 @@ pkg> add https://github.com/wwangnju/PhysicsEucation.jl
 ```
 
 ## 例子
-在examples目录中，实现了光栅夫琅和费衍射、圆孔夫琅和费衍射、简谐振动、受迫振动、牛顿环、双缝干涉、驻波的可交互式动态模拟。
+在examples目录中，实现了光栅夫琅和费衍射、圆孔夫琅和费衍射、简谐振动、受迫振动、牛顿环、双缝干涉、驻波以及正多边形夫琅和费衍射的可交互式动态模拟。
 ![standing](./examples/驻波.png)
 ![niu](./examples/牛顿环.png)
