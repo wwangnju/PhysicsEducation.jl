@@ -6,7 +6,7 @@ using ..Vibration: _trajectory_plot_controls!, _add_ds_param_controls!
 
 import ..PhysicsEducation: reinit!, current_state, current_parameters, step!, set_parameter!,  set_state!, trajectory_plot!
 
-export harmonicwave1D, harmonicwave2D, dopplereffect
+export harmonicwave1D, harmonicwave2D, dopplereffect, regular_polygon
 export WaveObservable, WaveFunction, intensity_plot!, doubleslit_intensity,michelsoninterferometer_intensity
 export doubleslit_fraunhofer, singleslit_fraunhofer, rectangular_fraunhofer, circular_fraunhofer, slit_grating, newton_ring_intensity
 
@@ -96,6 +96,7 @@ end
     trajectory_plot!(fig::Figure, dso::WaveObservable;
         parameter_sliders=nothing, 
         parameter_names=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> string.(keys(ps)).*"(j)") for (j, ps) in enumerate(parameter_sliders)], 
+        formats=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> "{:.3f}单位") for (j, ps) in enumerate(parameter_sliders)],
         colors=[:blue for _ in 1:length(dso.state_observables)], 
         axis=NamedTuple(), 
         plotkwargs=NamedTuple(),
@@ -107,6 +108,7 @@ Plot the trajectories.
 function trajectory_plot!(fig::Figure, dso::WaveObservable;
     parameter_sliders=nothing, 
     parameter_names=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> string.(keys(ps)).*"($j)") for (j, ps) in enumerate(parameter_sliders)], 
+    formats=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> "{:.3f}单位") for (j, ps) in enumerate(parameter_sliders)],
     colors=[:blue for _ in 1:length(dso.state_observables)], 
     axis=NamedTuple(), 
     plotkwargs=NamedTuple(),
@@ -140,7 +142,7 @@ function trajectory_plot!(fig::Figure, dso::WaveObservable;
     end
     if !isnothing(parameter_sliders)
         paramlayout = fig[2, :] = GridLayout(tellheight = true, tellwidth = false)
-        _add_param_controls!(fig, paramlayout, dso, p0, parameter_sliders, parameter_names)
+        _add_param_controls!(fig, paramlayout, dso, p0, parameter_sliders, parameter_names, formats)
     end
     return statespaceax
 end
@@ -170,10 +172,10 @@ function _init_statespace_plot!(layout::GridLayout, xycoords::Vector{Observable}
     return statespaceax
 end
 
-function  _add_param_controls!(fig::Figure, paramlayout::GridLayout, dso::WaveObservable, p0::Vector{<:Vector}, parameter_sliders::Vector{<:Dict}, parameter_names=[Dict(keys(ps) .=> string.(keys(ps)).*"($j)") for (j, ps) in enumerate(parameter_sliders)])
+function  _add_param_controls!(fig::Figure, paramlayout::GridLayout, dso::WaveObservable, p0::Vector{<:Vector}, parameter_sliders::Vector{<:Dict}, parameter_names=[Dict(keys(ps) .=> string.(keys(ps)).*"($j)") for (j, ps) in enumerate(parameter_sliders)], formats=[Dict(keys(ps) .=> "{:.3f}".*string.(keys(ps)).*"($j)") for (j, ps) in enumerate(parameter_sliders)])
     
     slidervals, sliders = _add_ds_param_controls!(
-        paramlayout, parameter_sliders, parameter_names, [current_parameters(ds) for ds in dso.wfs]
+        paramlayout, parameter_sliders, parameter_names, [current_parameters(ds) for ds in dso.wfs], formats
     )
     update = Button(fig, label = "update", tellwidth = false, tellheight = true)
     resetp = Button(fig, label = "reset p", tellwidth = false, tellheight = true)
@@ -262,6 +264,7 @@ Plot the intensity of wave function.
 function intensity_plot!(fig::Figure, dso::WaveObservable;
     parameter_sliders=nothing, 
     parameter_names=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> string.(keys(ps)).*"($j)") for (j, ps) in enumerate(parameter_sliders)], 
+    formats=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> "{:.3f}单位") for (j, ps) in enumerate(parameter_sliders)],
     colors=[:blue for _ in 1:length(dso.state_observables)], 
     axis=NamedTuple(), 
     plotkwargs=NamedTuple(),
@@ -310,7 +313,7 @@ function intensity_plot!(fig::Figure, dso::WaveObservable;
     if !isnothing(parameter_sliders)
         paramlayout = fig[2, :] = GridLayout(tellheight = true, tellwidth = false)
         slidervals, sliders = _add_ds_param_controls!(
-            paramlayout, parameter_sliders, parameter_names, [current_parameters(ds) for ds in dso.wfs]
+            paramlayout, parameter_sliders, parameter_names, [current_parameters(ds) for ds in dso.wfs], formats
         )
         update = Button(fig, label = "update", tellwidth = false, tellheight = true)
         resetp = Button(fig, label = "reset p", tellwidth = false, tellheight = true)
@@ -429,4 +432,31 @@ function slit_grating(t::Float64, xy::Vector{Vector{Float64}}, p::Vector)
     ys = xy[2]
     [isapprox(d/λ*sin(atan(x,L)), round(d/λ*sin(atan(x,L))),atol=1e-14) ? N^2*sinc(W/λ*sin(atan(x,L)))^2 : sinc(W/λ*sin(atan(x,L)))^2*sin(pi*N*d/λ*sin(atan(x,L)))^2/(sin(pi*d/λ*sin(atan(x,L))))^2 for x in xs, y in ys]
 end
+
+function regular_polygon(t::Float64, xy::Vector{Vector{Float64}}, p::Vector)
+    λ, R, L, n = p[1], p[2], p[3], p[4]
+    xs = xy[1]
+    ys = xy[2]
+    u = zeros(ComplexF64, length(xs), length(ys))
+    θ = 2*pi/n
+    m = tan(θ/2)
+    a = R*sin(θ/2)
+    k = 2*pi/λ
+    for (j, y) in enumerate(ys)
+        for (i, x) in enumerate(xs)
+            for is in 0:n-1
+                x1 = x*cos(θ*is)+y*sin(θ*is)
+                y1 = -x*sin(θ*is)+y*cos(θ*is)
+                y2 = y1
+                x2 =  x1
+                # u[i,j] += a*exp(im*k*L)*exp(im*k*(x2^2+y2^2)/(2*L))*(exp(-im*pi*a*(x2+m*y2)/(2*m*λ*L))*sinc(a*(x2+m*y2)/(2*m*λ*L))-exp(-im*pi*a*(x2-m*y2)/(2*m*λ*L))*sinc(a*(x2-m*y2)/(2*m*λ*L)))/(4*pi*m*(y2+eps()))
+                temp = x2+m*y2 ≈ 0.0 ? -a*pi/(m*λ*L) : (exp(-im*pi*a*(x2+m*y2)/(m*λ*L))-1)/((x2+m*y2)*(y2+eps()))
+                temp1 = x2-m*y2 ≈ 0.0 ? -a*pi/(m*λ*L) : (exp(-im*pi*a*(x2-m*y2)/(m*λ*L))-1)/((x2-m*y2)*(y2+eps()))
+                u[i,j] += (temp - temp1)*λ*L/2/pi^2
+            end
+        end
+    end
+    return abs2.(u)
+end
+
 end# module

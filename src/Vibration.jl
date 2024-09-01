@@ -167,6 +167,7 @@ end
     trajectory_plot!(fig::Figure, dso::TrajectoryObservable;
         parameter_sliders=nothing, 
         parameter_names=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> string.(keys(ps)).*"(j)") for (j, ps) in enumerate(parameter_sliders)], 
+        formats=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> "{:.3f}单位") for (j, ps) in enumerate(parameter_sliders)],
         colors=[:blue for _ in 1:length(dso.tail_observables)], 
         axis=NamedTuple(), 
         plotkwargs=NamedTuple()
@@ -177,6 +178,7 @@ Plot the trajectories.
 function trajectory_plot!(fig::Figure, dso::TrajectoryObservable;
     parameter_sliders=nothing, 
     parameter_names=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> string.(keys(ps)).*"($j)") for (j, ps) in enumerate(parameter_sliders)], 
+    formats=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> "{:.3f}单位") for (j, ps) in enumerate(parameter_sliders)],
     colors=[:blue for _ in 1:length(dso.tail_observables)], 
     axis=NamedTuple(), 
     plotkwargs=NamedTuple()
@@ -208,7 +210,7 @@ function trajectory_plot!(fig::Figure, dso::TrajectoryObservable;
     if !isnothing(parameter_sliders)
         paramlayout = fig[2, :] = GridLayout(tellheight = true, tellwidth = false)
         slidervals, sliders = _add_ds_param_controls!(
-            paramlayout, parameter_sliders, parameter_names, [current_parameters(ds) for ds in dso.dss]
+            paramlayout, parameter_sliders, parameter_names, [current_parameters(ds) for ds in dso.dss], formats
         )
         update = Button(fig, label = "update", tellwidth = false, tellheight = true)
         resetp = Button(fig, label = "reset p", tellwidth = false, tellheight = true)
@@ -280,7 +282,7 @@ function _trajectory_plot_controls!(layout)
     )   
     return reset.clicks, run.clicks, step.clicks, sg.sliders[1].value
 end
-function _add_ds_param_controls!(paramlayout, parameter_sliders, pnames, p0)
+function _add_ds_param_controls!(paramlayout, parameter_sliders, pnames, p0, formats)
     slidervals = [Dict{keytype(ps), Observable}() for ps in parameter_sliders]# directly has the slider observables
     sliders = [Dict{keytype(ps), Any}() for ps in parameter_sliders] # for updating via reset parameters
     tuples_for_slidergrid = []
@@ -288,7 +290,8 @@ function _add_ds_param_controls!(paramlayout, parameter_sliders, pnames, p0)
         for (i, (l, vals)) in enumerate(ps)
             startvalue = p0[j][l]
             label = string(pnames[j][l])
-            push!(tuples_for_slidergrid, (;label, range = vals, startvalue,color_active=:gray, color_active_dimmed=:gray))
+            format=string(formats[j][l])
+            push!(tuples_for_slidergrid, (;label=label, range = vals, format=format, startvalue=startvalue,color_active=:gray, color_active_dimmed=:gray))
         end
     end
     sg = SliderGrid(paramlayout[1,1], tuples_for_slidergrid...; tellheight = true)

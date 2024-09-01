@@ -20,10 +20,12 @@ function lissajous_figure()
     
     ps = [Dict(1=>0.1:0.1:1, 2=>1.0:1:4.0, 3=> 0.0:0.05:2pi, 4=>0.1:0.1:1, 5=>1.0:1:4.0, 6=> 0.0:0.05:2pi)]
     pnames = [Dict(1=>(L"f_x"), 2=>(L"A_x"), 3=>L"θ_x", 4=>L"f_y", 5=>L"A_y", 6=>L"θ_y")]
+    formats = [Dict(1=>"{:.1f}Hz", 2=>"{:}m", 3=>"{:.2f}rad", 4=>"{:.1f}Hz", 5=>"{:}m", 6=>"{:.2f}rad")]
     colors = [:black, ]
     trajectory_plot!(fig, dso; 
         parameter_sliders=ps, 
         parameter_names=pnames, 
+        formats=formats,
         colors=colors, 
         axis=(;aspect=1.0, limits=((-x0, x0), (-x0, x0)), xminorgridvisible=true, yminorgridvisible=true), 
         plotkwargs=(xminorgridvisible=true, yminorgridvisible=true)

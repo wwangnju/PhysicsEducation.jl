@@ -12,13 +12,15 @@ function rectangular_fraunhofer_figure()
     dso = WaveObservable([slit])
     ps = [Dict(1=>4e-7:1e-8:8e-6, 2=>1e-6:1e-6:1e-5, 3=>1e-6:1e-6:1e-5, 4=>0.5:0.1:3.0)]
     pnames = [Dict(1=>"波长λ", 2=>"矩宽W", 3=>"矩高H", 4=>"矩屏间距L")]
+    formats = [Dict(1=>"{:.2e}m", 2=>"{:.2e}m", 3=>"{:.2e}m", 5=>"{:}个", 4=>"{:.2f}m")]
     colors = [:grays]
 
     fig = Figure(;resolution = (1000, 800))
 
     intensity_plot!(fig, dso; 
         parameter_sliders=ps, 
-        parameter_names=pnames, 
+        parameter_names=pnames,
+        formats=formats, 
         colors=colors, 
         axis=(; limits=((minimum(xy[1]), maximum(xy[1])), (minimum(xy[2]),maximum(xy[2]))),     xminorgridvisible=true, yminorgridvisible=true), 
         plotkwargs=(xminorgridvisible=true, yminorgridvisible=true, colorrange=(0,0.005)),

@@ -21,10 +21,12 @@ function standingwave_figure()
 
     ps = [Dict(1=>0.01:0.01:pi, 2=>-2pi:0.01:2pi, 3=>1.0:1:4.0, 4=> 0.0:0.05:2pi), Dict(1=>0.01:0.01:pi, 2=>-2pi:0.01:2pi, 3=>1.0:1:4.0, 4=> 0.0:0.05:2pi)]
     pnames = [Dict(1=>"角频率ω₁",2=>"波矢k₁", 3=>"振幅A₁", 4=>"初相位θ₁"), Dict(1=>"角频率ω₂", 2=>"波矢k₂",3=>"振幅A₂", 4=>"初相位θ₂")]
-    colors = [:black for _ in 1:3]#[:blue, :purple, :green]
+    formats=[Dict(1=>"{:.2f}rad/s",2=>"{:.2f}rad/m", 3=>"{:}m", 4=>"{:.2f}rad"), Dict(1=>"{:.2f}rad/s",2=>"{:.2f}rad/m", 3=>"{:}m", 4=>"{:.2f}rad")]
+    colors = [:blue, :purple, :green]
     ax=trajectory_plot!(fig, dso; 
         parameter_sliders=ps, 
         parameter_names=pnames, 
+        formats=formats,
         colors=colors, 
         axis=(; limits=((-xmax, xmax), (-xmax, xmax)), xminorgridvisible=true, yminorgridvisible=true), 
         plotkwargs=[

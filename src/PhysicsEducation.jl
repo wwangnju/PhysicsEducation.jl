@@ -20,6 +20,6 @@ include("Wave.jl")
 using .Wave
 export harmonicwave1D, harmonicwave2D, dopplereffect
 export WaveObservable, WaveFunction, intensity_plot!, doubleslit_intensity, michelsoninterferometer_intensity
-export doubleslit_fraunhofer, singleslit_fraunhofer, rectangular_fraunhofer, circular_fraunhofer, slit_grating, newton_ring_intensity
+export doubleslit_fraunhofer, singleslit_fraunhofer, rectangular_fraunhofer, circular_fraunhofer, slit_grating, newton_ring_intensity, regular_polygon
 
 end

@@ -13,13 +13,15 @@ function doubleslit_figure()
 
     ps = [Dict(2=>4e-7:1e-8:8e-6, 3=>1e-5:2e-6:0.001, 4=>0.0:0.1:2pi)]
     pnames = [Dict(2=>"波长λ", 3=>"缝距d", 4=>"初相位差θ")]
-    colors = [:grays]#[:viridis]
+    formats=[Dict(2=>"{:.2e}m", 3=>"{:.2e}m", 4=>"{:.2f}rad")]
+    colors = [:viridis]
 
     fig = Figure(;resolution = (1000, 1000))
 
     intensity_plot!(fig, dso; 
         parameter_sliders=ps, 
         parameter_names=pnames, 
+        formats=formats,
         colors=colors, 
         axis=(; limits=((minimum(xy[1]), maximum(xy[1])), (minimum(xy[2]),maximum(xy[2]))),     xminorgridvisible=true, yminorgridvisible=true), 
         plotkwargs=(xminorgridvisible=true, yminorgridvisible=true,colorrange=(0,1e-3)),

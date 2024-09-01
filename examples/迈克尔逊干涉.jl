@@ -14,6 +14,7 @@ function michelsoninterferometer_figure()
 
     ps = [Dict(2=>4e-7:1e-8:8e-6, 3=>1e-5:1e-6:0.0001)]
     pnames = [Dict(2=>"波长λ", 3=>"移动距离d")]
+    formats=[Dict(2=>"{:.2e}m", 3=>"{:.2e}m")]
     colors = [:grays]
 
     fig = Figure(;resolution = (1000, 800))
@@ -21,6 +22,7 @@ function michelsoninterferometer_figure()
     intensity_plot!(fig, dso; 
         parameter_sliders=ps, 
         parameter_names=pnames, 
+        formats=formats,
         colors=colors, 
         axis=(; limits=((minimum(xy[1]), maximum(xy[1])), (minimum(xy[2]),maximum(xy[2]))),     xminorgridvisible=true, yminorgridvisible=true), 
         plotkwargs=(xminorgridvisible=true, yminorgridvisible=true),

@@ -14,6 +14,7 @@ function slit_grating_figure()
     dso = WaveObservable([slit])
     ps = [Dict(1=>4e-7:1e-8:8e-6, 2=>1e-7:1e-7:1e-5, 3=>0.0:1e-7:5e-6, 5=>1:1:100, 4=>0.01:0.01:3.0)]
     pnames = [Dict(1=>"波长λ", 2=>"光栅常数d", 3=>"缝宽W", 5=>"缝数N", 4=>"缝屏距L")]
+    formats=[Dict(1=>"{:.2e}m", 2=>"{:.2e}m", 3=>"{:.2e}m", 5=>"{:}个", 4=>"{:.2f}m")]
     colors = [:grays]
 
     fig = Figure(;size = (1000, 1000), fontsize=15)
@@ -21,6 +22,7 @@ function slit_grating_figure()
     ax, ax1 = intensity_plot!(fig, dso; 
         parameter_sliders=ps, 
         parameter_names=pnames, 
+        formats=formats,
         colors=colors, 
         axis=(; limits=((minimum(xy[1]), maximum(xy[1])), (minimum(xy[2]),maximum(xy[2]))),     xminorgridvisible=true, yminorgridvisible=true), 
         plotkwargs=(xminorgridvisible=true, yminorgridvisible=true),

@@ -12,14 +12,16 @@ function damped_figure()
     dv = DynamicalFunction(forcevibration, t0, p)
     dso = TrajectoryObservable([dv]; tail=tail, current_step=0, Δt=Δt)
     
-    fig = Figure(;resolution = (1200, 800))
+    fig = Figure(;resolution = (1200, 1000))
     
     ps = [Dict(1=>0.1:0.1:5, 2=>0.0:0.1:2.0, 3=> 0.0:0.1:5, 4=>0.0:0.1:5, 5=>0.0:0.5:4, 6=>0.1:0.1:10)]
     pnames = [Dict(1=>"固有角频率ω₀", 2=>"阻尼比"*"ξ", 3=>"初始位置"*"x₀", 4=>"初始速度"*"v₀", 5=>"驱动力"*"f", 6=>"驱动角频率"*"ω")]
+    formats = [Dict(1=>"{:.1f}rad/s", 2=>"{:.1f}", 3=>"{:.1f}m", 4=>"{:.1f}m/s", 5=>"{:.1f}N/kg", 6=>"{:.1f}rad/s")]
     colors = [:black, ]
     trajectory_plot!(fig, dso; 
         parameter_sliders=ps, 
         parameter_names=pnames, 
+        formats=formats,
         colors=colors, 
         axis=(; limits=((-xmax, xmax), (-xmax, xmax)), xminorgridvisible=true, yminorgridvisible=true), 
         plotkwargs=(xminorgridvisible=true, yminorgridvisible=true)
