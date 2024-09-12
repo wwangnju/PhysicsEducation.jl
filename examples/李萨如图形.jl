@@ -18,10 +18,10 @@ function lissajous_figure()
     
     dso = TrajectoryObservable([lsa]; tail=tail, current_step=0, Δt=Δt)
     
-    ps = [Dict(1=>0.1:0.1:1, 2=>1.0:1:4.0, 3=> 0.0:0.05:2pi, 4=>0.1:0.1:1, 5=>1.0:1:4.0, 6=> 0.0:0.05:2pi)]
+    ps = [Dict(1=>0.1:0.01:1, 2=>1.0:1:4.0, 3=> 0.0:0.01:2, 4=>0.1:0.01:1, 5=>1.0:1:4.0, 6=> 0.0:0.01:2)]
     pnames = [Dict(1=>(L"f_x"), 2=>(L"A_x"), 3=>L"θ_x", 4=>L"f_y", 5=>L"A_y", 6=>L"θ_y")]
-    formats = [Dict(1=>"{:.1f}Hz", 2=>"{:}m", 3=>"{:.2f}rad", 4=>"{:.1f}Hz", 5=>"{:}m", 6=>"{:.2f}rad")]
-    colors = [:black, ]
+    formats = [Dict(1=>"{:.2f}Hz", 2=>"{:}m", 3=>"{:.2f}rad/π", 4=>"{:.2f}Hz", 5=>"{:}m", 6=>"{:.2f}rad/π")]
+    colors = [:blue, ]
     trajectory_plot!(fig, dso; 
         parameter_sliders=ps, 
         parameter_names=pnames, 

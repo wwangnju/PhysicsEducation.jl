@@ -21,10 +21,10 @@ function harmonicmotion()
     
     dso = TrajectoryObservable(shms; tail=tail, current_step=0, Δt=Δt, mapdf=Base.:+)
     
-    ps = [Dict(1=>0.01:0.01:2, 2=>0.0:1:4.0, 3=> 0.0:0.05:2pi), Dict(1=>0.01:0.01:2, 2=>0.0:1:4.0, 3=> 0.0:0.05:2pi)]
+    ps = [Dict(1=>0.01:0.01:2, 2=>0.0:1:4.0, 3=> 0.0:0.01:2), Dict(1=>0.01:0.01:2, 2=>0.0:1:4.0, 3=> 0.0:0.01:2)]
     pnames = [Dict(1=>"频率f₁", 2=>"振幅A₁", 3=>"初相位θ₁"), Dict(1=>"频率f₂", 2=>"振幅A₂", 3=>"初相位θ₂")]
-    formats = [Dict(1=>"{:.2f}Hz", 2=>"{:}m", 3=>"{:.2f}rad"), Dict(1=>"{:.2f}Hz", 2=>"{:}m", 3=>"{:.2f}rad")]
-    colors = [:black, :black, :black]#[:blue, :purple, :green]
+    formats = [Dict(1=>"{:.2f}Hz", 2=>"{:}m", 3=>"{:.2f}rad/π"), Dict(1=>"{:.2f}Hz", 2=>"{:}m", 3=>"{:.2f}rad/π")]
+    colors = [:blue, :purple, :green] #[:black, :black, :black]#
     ax = trajectory_plot!(fig, dso; 
         parameter_sliders=ps, 
         parameter_names=pnames, 
