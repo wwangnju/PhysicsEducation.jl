@@ -14,7 +14,7 @@ export dampedvibration, forcevibration, _trajectory_plot_controls!, _add_ds_para
 Define the simple harmonic osscillator
 """
 function simpleharmonic(t::Real, p::Vector{Float64})
-    ω, A, ϕ = p[1], p[2], p[3]
+    ω, A, ϕ = p[1], p[2], p[3]#*pi
     x = A*cos(2pi*ω*t+ϕ)
     y = A*sin(2pi*ω*t+ϕ)
     return Float64[x, y]
@@ -25,8 +25,8 @@ end
 Define the lissajous picture.
 """
 function lissajous(t::Real, p::Vector{Float64})
-    ω, A, ϕ = p[1], p[2], p[3]
-    ω₂, A₂, ϕ₂ = p[4], p[5], p[6]
+    ω, A, ϕ = p[1], p[2], p[3]#*pi
+    ω₂, A₂, ϕ₂ = p[4], p[5], p[6]#*pi
     x = A*cos(2pi*ω*t+ϕ)
     y = A₂*cos(2pi*ω₂*t+ϕ₂)
     return Float64[x, y]
@@ -167,7 +167,6 @@ end
     trajectory_plot!(fig::Figure, dso::TrajectoryObservable;
         parameter_sliders=nothing, 
         parameter_names=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> string.(keys(ps)).*"(j)") for (j, ps) in enumerate(parameter_sliders)], 
-        formats=isnothing(parameter_sliders) ? nothing : [Dict(keys(ps) .=> "{:.3f}单位") for (j, ps) in enumerate(parameter_sliders)],
         colors=[:blue for _ in 1:length(dso.tail_observables)], 
         axis=NamedTuple(), 
         plotkwargs=NamedTuple()
@@ -212,8 +211,8 @@ function trajectory_plot!(fig::Figure, dso::TrajectoryObservable;
         slidervals, sliders = _add_ds_param_controls!(
             paramlayout, parameter_sliders, parameter_names, [current_parameters(ds) for ds in dso.dss], formats
         )
-        update = Button(fig, label = "update", tellwidth = false, tellheight = true)
-        resetp = Button(fig, label = "reset p", tellwidth = false, tellheight = true)
+        update = Button(fig, label = "更新", tellwidth = false, tellheight = true)
+        resetp = Button(fig, label = "初始化参数", tellwidth = false, tellheight = true)
         # paramlayout[2, 1] = update
         # paramlayout[2, 2] = resetp
         gl = paramlayout[2, :] = GridLayout()
@@ -273,12 +272,12 @@ function _init_statespace_plot!(layout::GridLayout, tailobs::Vector{Observable},
 end
 function _trajectory_plot_controls!(layout)
     layout[2, 1] = controllayout = GridLayout(tellwidth = false)
-    reset = Button(controllayout[1, 0]; label = "reset")
-    run = Button(controllayout[1, 1]; label = "run")
-    step = Button(controllayout[1, 2]; label = "step")
+    reset = Button(controllayout[1, 0]; label = "初始化")
+    run = Button(controllayout[1, 1]; label = "开始")
+    step = Button(controllayout[1, 2]; label = "前进")
     slider_vals = vcat(1:10, 100:100:1000)
     sg = SliderGrid(controllayout[1,3],
-        (label = "steps =", range = slider_vals, startvalue = 1,color_active=:gray, color_active_dimmed=:gray),
+        (label = "步长 =", range = slider_vals, startvalue = 1,color_active=:gray, color_active_dimmed=:gray),
     )   
     return reset.clicks, run.clicks, step.clicks, sg.sliders[1].value
 end
@@ -290,8 +289,8 @@ function _add_ds_param_controls!(paramlayout, parameter_sliders, pnames, p0, for
         for (i, (l, vals)) in enumerate(ps)
             startvalue = p0[j][l]
             label = string(pnames[j][l])
-            format=string(formats[j][l])
-            push!(tuples_for_slidergrid, (;label=label, range = vals, format=format, startvalue=startvalue,color_active=:gray, color_active_dimmed=:gray))
+            format=formats[j][l]
+            push!(tuples_for_slidergrid, (;label, range = vals, format=format, startvalue,color_active=:gray, color_active_dimmed=:gray))
         end
     end
     sg = SliderGrid(paramlayout[1,1], tuples_for_slidergrid...; tellheight = true)

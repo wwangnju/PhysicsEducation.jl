@@ -2,7 +2,7 @@ module Wave
 using Makie
 using SpecialFunctions: besselj1
 using ..Vibration: _trajectory_plot_controls!, _add_ds_param_controls!
-# using ..PhysicsEducation: AbstractStateObservable
+
 
 import ..PhysicsEducation: reinit!, current_state, current_parameters, step!, set_parameter!,  set_state!, trajectory_plot!
 
@@ -177,8 +177,8 @@ function  _add_param_controls!(fig::Figure, paramlayout::GridLayout, dso::WaveOb
     slidervals, sliders = _add_ds_param_controls!(
         paramlayout, parameter_sliders, parameter_names, [current_parameters(ds) for ds in dso.wfs], formats
     )
-    update = Button(fig, label = "update", tellwidth = false, tellheight = true)
-    resetp = Button(fig, label = "reset p", tellwidth = false, tellheight = true)
+    update = Button(fig, label = "更新", tellwidth = false, tellheight = true)
+    resetp = Button(fig, label = "初始化参数", tellwidth = false, tellheight = true)
     gl = paramlayout[2, :] = GridLayout()
     gl[1,1] = update
     gl[1,2] = resetp
@@ -315,8 +315,8 @@ function intensity_plot!(fig::Figure, dso::WaveObservable;
         slidervals, sliders = _add_ds_param_controls!(
             paramlayout, parameter_sliders, parameter_names, [current_parameters(ds) for ds in dso.wfs], formats
         )
-        update = Button(fig, label = "update", tellwidth = false, tellheight = true)
-        resetp = Button(fig, label = "reset p", tellwidth = false, tellheight = true)
+        update = Button(fig, label = "更新", tellwidth = false, tellheight = true)
+        resetp = Button(fig, label = "初始化参数", tellwidth = false, tellheight = true)
         gl = paramlayout[2, :] = GridLayout()
         gl[1,1] = update
         gl[1,2] = resetp
