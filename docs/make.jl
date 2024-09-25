@@ -21,5 +21,5 @@ makedocs(;
 
 deploydocs(;
     repo="github.com/wwangnju/PhysicsEducation.jl",
-    devbranch="master",
+    devbranch="main",
 )
