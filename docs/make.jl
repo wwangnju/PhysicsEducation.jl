@@ -11,7 +11,7 @@ makedocs(;
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         canonical="https://wwangnju.github.io/PhysicsEducation.jl",
-        edit_link="master",
+        edit_link="main",
         assets=String[],
     ),
     pages=[
