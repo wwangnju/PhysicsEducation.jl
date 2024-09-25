@@ -9,7 +9,7 @@
 In Julia, please type `]` in the REPL to use the package mode, then type this command:
 
 ```julia
-pkg> add https://github.com/wwangnju/PhysicsEucation.jl
+pkg> add https://github.com/wwangnju/PhysicsEducation.jl.git
 ```
 
 ## 例子
